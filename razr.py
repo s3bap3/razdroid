@@ -71,8 +71,6 @@ def usage ():
 		print "\t\t-sm\tStart Monkey"
 		print "\t\t-ss\tStart Service"
 		print "\t\t-st\tSend Secret codes"
-		print "\n\tFuzz"
-		print "\t\t-ft\tFuzz Secret Codes\n"
 		sys.exit()
 
 		
@@ -429,26 +427,6 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		applist(apkdic)
 	elif action == "-lm":
 		print manifest
-		
-
-def fuzz_activities(action):
-	if action == '-ft':
-		complete_list = []
-		valid_codes = []
-		mylist = '0123456789'
-		for current in xrange(5):
-			array = [i for i in mylist]
-			for y in xrange(current):
-				array = [x+i for i in mylist for x in array]
-			for line in array:
-				subprocess.call( Path_adb + ' shell am broadcast -a android.provider.Telephony.SECRET_CODE -d android_secret_code://' + line + '| head -1', shell=True)
-				try:
-					output = subprocess.check_output('adb shell logcat -t 50 | grep ActivityManager | grep START', shell=True)
-					print output
-					valid_codes.append(line)
-				except:
-					pass
-		print valid_codes
 
 
 def device_enumeration(action, parameter):
@@ -526,8 +504,6 @@ if __name__ == "__main__":
 		apps_enumeration(manifest, app, action, apkdic,0)
 	elif "-d" in action:
 		device_enumeration(action, app)
-	elif "-f" in action:
-		fuzz_activities(action)
 	elif action != "-sa" and action != "-sc":
 		start_activities(action, app, activity, "")
 	elif "-s" in action:
