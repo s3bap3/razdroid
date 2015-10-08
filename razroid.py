@@ -1,11 +1,8 @@
 #!/usr/bin/python
 
 import sys
-import codecs
 import signal
 import os
-import base64
-import binascii
 import time
 import subprocess
 import re
