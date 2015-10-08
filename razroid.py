@@ -454,6 +454,7 @@ def device_enumeration(action, parameter):
 def getmanifest(app):
 	try:
 		act = subprocess.check_output( Path_aapt + ' dump xmltree ' + directory + '/'+ app + ' AndroidManifest.xml' , shell=True)
+		return act
 	except:
 		print "Invalid App"
 		usage()
