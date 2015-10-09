@@ -149,6 +149,10 @@ def parse_manifest (manifest):
 			flag = "feature"
 		elif "E: uses-permission" in line:
 			flag = "permission"
+		elif "E: permission" in line:
+			flag = "permission"
+		elif "android.permission" in line:
+			flag = "permission"
 		elif "E: activity" in line:
 			flag = "activity"
 		elif "E: uses-library" in line:
