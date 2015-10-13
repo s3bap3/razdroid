@@ -9,8 +9,8 @@ import re
 import urllib
 
 
-Path_aapt="aapt"
-Path_adb="adb"
+Path_aapt="./aapt"
+Path_adb="./adb"
 
 
 def signal_handler(signal, frame):
@@ -329,15 +329,14 @@ def start_activities(action, app, activity, manifest):
 				
 def downloadapp(apk, app):
 	if not os.path.isfile (directory + '/' + app):
-		print "Downloading App"
+		print "Downloading App " + app
 		try:
 			output = subprocess.call( Path_adb + ' pull ' + apk[1:] + ' ' + directory + '/' + app, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT, shell=True)
 		except:
 			print "Invalid App"
 			usage()
 	else:
-		print "App already exists"
-	exit()
+		print "App "+ app + " already exists"
 	
 
 def apps_enumeration (manifest, app, action, apkdic,status):
@@ -424,8 +423,6 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		if (output != [] and status == 1) or status == 0:
 			print ('\nDangerous Permissions (' + app + ')\n========')
 			printlists(output)
-	elif action == "-ll":
-		applist(apkdic)
 	elif action == "-lm":
 		print manifest
 
@@ -495,7 +492,9 @@ if __name__ == "__main__":
 	directory = devicename.split(':', 1)[0]
 	print "\nDevice Name: " + devicename
 	apkdic = gather_apks()
-	if ("-a" in action or "-l" in action) and (app == ""):
+	if "-ll" in action:
+		applist(apkdic)
+	elif ("-a" in action or "-l" in action) and (app == ""):
 		for key in apkdic:
 			downloadapp(apkdic[key], key)
 			manifest = getmanifest(key)
@@ -514,4 +513,3 @@ if __name__ == "__main__":
 	else:
 		print "\nError - Unknown Option" 
 		usage()			
-
