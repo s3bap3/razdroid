@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+#changelog
+#06/11/15 Added -dp permissions types, updated -ap
+
 import sys
 import signal
 import os
@@ -9,8 +12,8 @@ import re
 import urllib
 
 
-Path_aapt="./aapt"
-Path_adb="./adb"
+Path_aapt="aapt.exe"
+Path_adb="adb.exe"
 
 
 def signal_handler(signal, frame):
@@ -25,7 +28,7 @@ def signal_exit(signal, frame):
 def usage ():
 		print "\n\tUsage:"
 		print "\t\trazroid.py -d{d,s} [Parameter]"
-		print "\t\trazroid.py -d{e,g,l,p,u} "
+		print "\t\trazroid.py -d{e,g,l,p,q,u} "
 		print "\t\trazroid.py -a{a,b,c,d,f i,l,m,p,q,s,x} [App]"
 		print "\t\trazroid.py -l{l,m} [App]"
 		print "\t\trazroid.py -s{a,c,m} {App} [Activity|Content Provider|Count]"
@@ -39,7 +42,8 @@ def usage ():
 		print "\t\t-du\tDevice Dumpstate"
 		print "\t\t-dg\tDevice Getprop"
 		print "\t\t-dl\tDevice Logcat"
-		print "\t\t-dp\tDevice Process List"
+		print "\t\t-dp\tDevice Permissions Types"
+		print "\t\t-dq\tDevice Process List"
 		print "\t\t-ds\tDevice Services"
 		print "\n\tApps Enumeration"
 		print "\t\t-aa\tApp Enumerate Activities"
@@ -110,14 +114,29 @@ def applist(apkdic):
 	for key in apkdic: 
 		print "%-50s %s" % (key, apkdic[key])
 	sys.exit()
-	
+
+
+def get_insecure_perm ():
+	output = subprocess.check_output( Path_adb + ' shell pm list permissions -f | egrep "permission:|protectionLevel:" | cut -f 2 -d ":" ', shell=True)
+	count = 0
+	syspermissions = {}
+	for line in output.split():
+		count += 1
+		if (count % 2 != 0):
+			temp = line
+		else:
+			syspermissions[temp]	= line
+	return syspermissions
 			
 def filter_permissions(outputraw):
 	output=[]
-	insecureperm = ['ACCOUNT_MANAGER','AUTHENTICATE_ACCOUNTS','BIND_DEVICE_ADMIN','GET_ACCOUNTS','MANAGE_ACCOUNTS','MANAGE_APP_TOKENS','USE_CREDENTIALS','WRITE_SECURE_SETTINGS','WRITE_SETTINGS','WRITE_SYNC_SETTINGS','ACCESS_COARSE_LOCATION','ACCESS_FINE_LOCATION','LOCATION_HARDWARE','BLUETOOTH_ADMIN','BLUETOOTH_PRIVILEGED','INTERNET','NFC','TRANSMIT_IR','WRITE_APN_SETTINGS','CALL_PHONE','CALL_PRIVILEGED','SEND_SMS','USE_SIP','CAPTURE_AUDIO_OUTPUT','CAPTURE_SECURE_VIDEO_OUTPUT','CAPTURE_VIDEO_OUTPUT','DUMP','PROCESS_OUTGOING_CALLS','READ_CALL_LOG','READ_CONTACTS','READ_HISTORY_BOOKMARKS','READ_LOGS','READ_SMS','RECEIVE_MMS','RECEIVE_SMS','RECEIVE_WAP_PUSH','RECORD_AUDIO','WRITE_CALL_LOG','WRITE_CONTACTS','WRITE_HISTORY_BOOKMARKS','INJECT_EVENTS','INSTALL_PACKAGES','READ_PHONE_STATE']
+	syspermissions = get_insecure_perm()
 	for line in outputraw:
-		if any ( perm in line for perm in insecureperm):
-			output.append(line)
+		try:
+			if syspermissions[line] == 'dangerous' or syspermissions[line] == 'signature|system':
+				output.append(line)
+		except:
+			pass
 	return output
 
 				
@@ -272,6 +291,8 @@ def printwparents_ss(list, intent_filter, data, app):
 					if act in dataline:
 						(line3,act,line4) = re.split('\|',dataline)
 						print "\t" + line3 + ">" + line4
+	if isc == 0:
+		print ('\nAndroid Secret codes (' + app + ')\n========\n'+ "N/A")
 
 
 def touches():
@@ -329,14 +350,14 @@ def start_activities(action, app, activity, manifest):
 				
 def downloadapp(apk, app):
 	if not os.path.isfile (directory + '/' + app):
-		print "Downloading App " + app
+		#print "[*] Downloading App " + app
 		try:
 			output = subprocess.call( Path_adb + ' pull ' + apk[1:] + ' ' + directory + '/' + app, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT, shell=True)
 		except:
-			print "Invalid App"
+			print "[*] Invalid App"
 			usage()
-	else:
-		print "App "+ app + " already exists"
+	#else:
+		#print "[*] App "+ app + " already exists"
 	
 
 def apps_enumeration (manifest, app, action, apkdic,status):
@@ -364,10 +385,14 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | egrep "content://[a-zA-Z]" | sed -e "s/.*content:/content:/"', shell=True)
 		if temp != "":
 			print ('\nContent Providers (' + app + ')\n========\n' + temp)
+		else:
+			print ('\nContent Providers (' + app + ')\n========\n' + "N/A")
 	elif action == "-ae":
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | grep "\.db.\?$" | sed -e "s/\t//"', shell=True)
 		if temp != "":
 			print ('\nDatabases (' + app + ')\n========\n' + temp)
+		else:
+			print ('\nDatabases (' + app + ')\n========\n' + "N/A")
 	elif action == "-ap":
 		if (uses_permission != [] and status == 1) or status == 0:
 			print ('\nPermissions (' + app + ')\n========')
@@ -443,6 +468,15 @@ def device_enumeration(action, parameter):
 	elif action == "-du":
 		output = subprocess.check_output( Path_adb + ' shell dumpstate ', shell=True)
 	elif action == "-dp":
+		syspermissions = get_insecure_perm()
+		for line in ['normal','signature','dangerous','signature|system']:
+			print "\nPermission Type: " + line + '\n========'
+			for key in syspermissions:
+				if syspermissions[key] == line:
+					print key
+		#output = str(syspermissions)
+		output =""
+	elif action == "-dq":
 		output = subprocess.check_output( Path_adb + ' shell procrank', shell=True)
 	elif action == "-de":
 		output = subprocess.check_output( Path_adb + ' shell printenv ', shell=True)
@@ -457,17 +491,18 @@ def getmanifest(app):
 		act = subprocess.check_output( Path_aapt + ' dump xmltree ' + directory + '/'+ app + ' AndroidManifest.xml' , shell=True)
 		return act
 	except:
-		print "Invalid App"
+		print "[*] Invalid App"
 		usage()
 	
 	
 if __name__ == "__main__":
-	actionslist = ["-dd","-de","-du","-dg","-dl","-dp","-ds","-aa","-ab","-ac","-ad","-ae","-af","-ai","-al","-am","-ap","-aq","-as","-at","-ax","-lm","-ll","-sa","-sc","-sd","-si","-sk","-sm","-ss","-st","-su",'-ft']
+	actionslist = ["-dd","-de","-du","-dg","-dl","-dp","-dq","-ds","-aa","-ab","-ac","-ad","-ae","-af","-ai","-al","-am","-ap","-aq","-as","-at","-ax","-lm","-ll","-sa","-sc","-sd","-si","-sk","-sm","-ss","-st","-su",'-ft']
 	signal.signal(signal.SIGINT, signal_handler)
 	if (len(sys.argv) != 2 and len(sys.argv) != 3 and len(sys.argv) != 4):
 		usage()
 	action=sys.argv[1].lower()
 	if action not in actionslist:
+		print '\n[*] Uknown parameter'
 		usage()
 	try:
 		app=sys.argv[2]
@@ -481,11 +516,11 @@ if __name__ == "__main__":
 	twoparam = ['-ss']
 	if any ( param in action for param in oneparam):
 		if app == "":
-			print "Missing arguments"
+			print "'\n[*] Missing argument"
 			usage()
 	elif any ( param in action for param in twoparam):
 		if app == "" or activity == "":
-			print "Missing arguments"
+			print "'\n[*] Missing argument"
 			usage()
 	global devicename, directory
 	devicename = getdevicename()
@@ -511,5 +546,5 @@ if __name__ == "__main__":
 		manifest = getmanifest(app)
 		start_activities(action, app, activity, manifest)
 	else:
-		print "\nError - Unknown Option" 
+		print "'\n[*] Error - Unknown parameter" 
 		usage()			
