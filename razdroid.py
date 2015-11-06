@@ -90,7 +90,7 @@ def getdevicename():
 	try:
 		output = subprocess.check_output( Path_adb + '  devices' , shell=True)
 	except:
-		print "\nUnable to gather device information"
+		print "\n[*] Unable to gather device information"
 		sys.exit()
 	for line in output.splitlines():
 		if flag == 1 and line != "":
@@ -99,10 +99,10 @@ def getdevicename():
 		if "List of devices" in line:
 			flag = 1
 	if devname == "":
-		print "Error: Device not available"
+		print "\n[*] Error: Device not available"
 		sys.exit()
 	elif devname.split()[1] == "offline":
-		print "Error: Device offline"
+		print "\n[*] Error: Device offline"
 		sys.exit()
 	else:
 		return devname.split()[0]
@@ -284,7 +284,7 @@ def printwparents_ss(list, intent_filter, data, app):
 			if "SECRET_CODE" in line:
 				isc = 1
 				(line3,act,line4) = re.split('\|',line)
-				print ('\nAndroid Secret codes (' + app + ')\n========')
+				print ('\nSecret codes (' + app + ')\n============')
 				print act
 				print "\t" + line3 + ">" + line4
 				for dataline in data:
@@ -292,7 +292,7 @@ def printwparents_ss(list, intent_filter, data, app):
 						(line3,act,line4) = re.split('\|',dataline)
 						print "\t" + line3 + ">" + line4
 	if isc == 0:
-		print ('\nAndroid Secret codes (' + app + ')\n========\n'+ "N/A")
+		print ('\nSecret codes (' + app + ')\n============\n'+ "N/A")
 
 
 def touches():
@@ -367,11 +367,11 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 	newlist=permissions + intent_filter + data
 	if action == "-aa":
 		if (activity != [] and status == 1) or status == 0:
-			print ('\nActivities (' + app + ')\n========')
+			print ('\nActivities (' + app + ')\n==========')
 			printlists (activity)
 	elif action == "-ab":
 		if (receiver != [] and status == 1) or status == 0:
-			print ('\nBroadcast Receivers (' + app + ')\n========')
+			print ('\nBroadcast Receivers (' + app + ')\n===================')
 			printlists (receiver)
 	elif action == "-as":
 		if (service != [] and status == 1) or status == 0:
@@ -379,27 +379,27 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			printlists (service)
 	elif action == "-ad":
 		if (data != [] and status == 1) or status == 0:
-			print ('\nData (' + app + ')\n========')
+			print ('\nData (' + app + ')\n====')
 			printlists (data)
 	elif action == "-ac":
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | egrep "content://[a-zA-Z]" | sed -e "s/.*content:/content:/"', shell=True)
 		if temp != "":
-			print ('\nContent Providers (' + app + ')\n========\n' + temp)
+			print ('\nContent Providers (' + app + ')\n=================\n' + temp)
 		else:
-			print ('\nContent Providers (' + app + ')\n========\n' + "N/A")
+			print ('\nContent Providers (' + app + ')\n=================\n' + "N/A")
 	elif action == "-ae":
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | grep "\.db.\?$" | sed -e "s/\t//"', shell=True)
 		if temp != "":
-			print ('\nDatabases (' + app + ')\n========\n' + temp)
+			print ('\nDatabases (' + app + ')\n=========\n' + temp)
 		else:
-			print ('\nDatabases (' + app + ')\n========\n' + "N/A")
+			print ('\nDatabases (' + app + ')\n=========\n' + "N/A")
 	elif action == "-ap":
 		if (uses_permission != [] and status == 1) or status == 0:
-			print ('\nPermissions (' + app + ')\n========')
+			print ('\nPermissions (' + app + ')\n===========')
 			printlists (uses_permission)
 	elif action == "-ai":
 		if (intent_filter != [] and status == 1) or status == 0:
-			print ('\nActions (' + app + ')\n========')
+			print ('\nActions (' + app + ')\n=======')
 			printlists (intent_filter)
 	elif action == "-af":
 		if (uses_feature != [] and status == 1) or status == 0:
@@ -407,38 +407,39 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			printlists (uses_feature)
 	elif action == "-al":
 		if (uses_library != [] and status == 1) or status == 0:
-			print ('\nLibraries (' + app + ')\n========')
+			print ('\nLibraries (' + app + ')\n=========')
 			printlists (uses_library)
 	elif action == "-am":
 		if (meta_data != [] and status == 1) or status == 0:
-			print ('\nMeta-Data (' + app + ')\n========')
+			print ('\nMeta-Data (' + app + ')\n=========')
 			printlists (meta_data)
 	elif action == "-at":
 		printwparents_ss (activity, intent_filter, data, app) 
 	elif action == "-ax":
+		print "\n[*] Analisis for app " + app
 		if (activity != [] and status == 1) or status == 0:
-			print ('\nActivities (' + app + ')\n========')
+			print ('\nActivities\n==========')
 			printwparents (activity, newlist)
 		if (receiver != [] and status == 1) or status == 0:
-			print ('\nBroadcast Receivers (' + app + ')\n========')
+			print ('\nBroadcast Receivers\n===================')
 			printwparents (receiver, newlist)
 		if (service != [] and status == 1) or status == 0:
-			print ('\nServices (' + app + ')\n========')
+			print ('\nServices\n========')
 			printwparents (service, newlist)
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | egrep "content://[a-zA-Z]" | sed -e "s/.*content:/content:/"', shell=True)
 		if (temp != "" and status == 1) or status == 0:
-			print ('\nContent Providers (' + app + ')\n========\n' + temp)
+			print ('\nContent Providers\n=================\n' + temp)
 		if (uses_permission != [] and status == 1) or status == 0:
-			print ('\nPermissions (' + app + ')\n========')
+			print ('\nPermissions\n===========')
 			printwparents (uses_permission, newlist)
 		if (uses_feature != [] and status == 1) or status == 0:
-			print ('\nFeatures (' + app + ')\n========')
+			print ('\nFeatures\n========')
 			printwparents (uses_feature, newlist)
 		if (uses_library != [] and status == 1) or status == 0:
-			print ('\nLibraries (' + app + ')\n========')
+			print ('\nLibraries\n=========')
 			printwparents (uses_library, newlist)
 		if (meta_data != [] and status == 1) or status == 0:
-			print ('\nMeta-Data (' + app + ')\n========')
+			print ('\nMeta-Data\n=========')
 			printlists (meta_data)
 		if (status == 1):
 			print "\n=================="
@@ -446,7 +447,7 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		temp = uses_permission + permissions
 		output = filter_permissions(temp)
 		if (output != [] and status == 1) or status == 0:
-			print ('\nDangerous Permissions (' + app + ')\n========')
+			print ('\nDangerous Permissions (' + app + ')\n=====================')
 			printlists(output)
 	elif action == "-lm":
 		print manifest
