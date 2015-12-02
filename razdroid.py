@@ -307,7 +307,7 @@ def printwparents_ss(list, intent_filter, data, app):
 			if "SECRET_CODE" in line:
 				isc = 1
 				(line3,act,line4) = re.split('\|',line)
-				print ('\nSecret codes (' + app + ')\n============')
+				print ('\nSecret codes \n============')
 				print act
 				print "\t" + line3 + ">" + line4
 				for dataline in data:
@@ -315,7 +315,7 @@ def printwparents_ss(list, intent_filter, data, app):
 						(line3,act,line4) = re.split('\|',dataline)
 						print "\t" + line3 + ">" + line4
 	if isc == 0:
-		print ('\nSecret codes (' + app + ')\n============\n'+ "N/A")
+		print ('\nSecret codes \n============\n'+ "N/A")
 
 
 def touches():
@@ -471,6 +471,7 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		if (meta_data != [] and status == 1) or status == 0:
 			print ('\nMeta-Data\n=========')
 			printlists (meta_data)
+		printwparents_ss (activity, intent_filter, data, app) 
 		if (status == 1):
 			print "\n=================="
 	elif action == "-aq":
