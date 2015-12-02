@@ -58,7 +58,7 @@ def usage ():
 		print "\t\t-am\tApp Enumerate Metadata"
 		print "\t\t-ap\tApp Enumerate Permissions"
 		print "\t\t-aq\tApp Enumerate Dangerous Permissions"
-		print "\t\t-ar\tApp Enumerate Providers"
+		print "\t\t-ar\tApp Enumerate Content Resolver"
 		print "\t\t-as\tApp Enumerate Services"
 		print "\t\t-at\tApp Enumerate Secret Codes"
 		print "\t\t-ax\tApp Enumerate Everything"
@@ -423,12 +423,12 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		if (data != [] and status == 1) or status == 0:
 			print ('\nData (' + app + ')\n====')
 			printlists (data)
-	elif action == "-ac":
+	elif action == "-ar":
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | egrep "content://[a-zA-Z]" | sed -e "s/.*content:/content:/"', shell=True)
 		if temp != "":
-			print ('\nContent Providers (' + app + ')\n=================\n' + temp)
+			print ('\nContent Resolver (' + app + ')\n================\n' + temp)
 		else:
-			print ('\nContent Providers (' + app + ')\n=================\n' + "N/A")
+			print ('\nContent Resolver (' + app + ')\n================\n' + "N/A")
 	elif action == "-ae":
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | grep "\.db.\?$" | sed -e "s/\t//"', shell=True)
 		if temp != "":
@@ -457,8 +457,8 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			printlists (meta_data)
 	elif action == "-at":
 		printwparents_ss (activity, intent_filter, data, app) 
-	elif action == "-ar":
-		print ('\nProviders \n=========')
+	elif action == "-ac":
+		print ('\nContent Providers \n=================')
 		printlists (provider)
 	elif action == "-ax":
 		print "\n[*] Analysis for app " + app
@@ -473,7 +473,7 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			printwparents (service, newlist)
 		temp = subprocess.check_output('unzip -p ' + directory + '/' + app + ' | strings | egrep "content://[a-zA-Z]" | sed -e "s/.*content:/content:/"', shell=True)
 		if (temp != "" and status == 1) or status == 0:
-			print ('\nContent Providers\n=================\n' + temp)
+			print ('\nContent Resolver\n================\n' + temp)
 		if (uses_permission != [] and status == 1) or status == 0:
 			print ('\nPermissions\n===========')
 			printwparents (uses_permission, newlist)
@@ -481,7 +481,7 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			print ('\nFeatures\n========')
 			printwparents (uses_feature, newlist)
 		if (provider != [] and status == 1) or status == 0:
-			print ('\nProviders \n=========')
+			print ('\nContent Providers \n=================')
 			printwparents (provider, newlist)
 		if (uses_library != [] and status == 1) or status == 0:
 			print ('\nLibraries\n=========')
