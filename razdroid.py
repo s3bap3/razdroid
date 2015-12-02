@@ -2,6 +2,7 @@
 
 #changelog
 #06/11/15 Added -dp permissions types, updated -ap
+#02/12/15 Added exported analysis for activities, providers, services and receivers. Added Providers (-ar) that were lost in translation
 
 import sys
 import signal
@@ -29,7 +30,7 @@ def usage ():
 		print "\n\tUsage:"
 		print "\t\trazroid.py -d{d,s} [Parameter]"
 		print "\t\trazroid.py -d{e,g,l,p,q,u} "
-		print "\t\trazroid.py -a{a,b,c,d,f i,l,m,p,q,s,x} [App]"
+		print "\t\trazroid.py -a{a,b,c,d,f i,l,m,p,q,r,s,x} [App]"
 		print "\t\trazroid.py -l{l,m} [App]"
 		print "\t\trazroid.py -s{a,c,m} {App} [Activity|Content Provider|Count]"
 		print "\t\trazroid.py -si {Action} [App/Receiver]"
@@ -57,6 +58,7 @@ def usage ():
 		print "\t\t-am\tApp Enumerate Metadata"
 		print "\t\t-ap\tApp Enumerate Permissions"
 		print "\t\t-aq\tApp Enumerate Dangerous Permissions"
+		print "\t\t-ar\tApp Enumerate Providers"
 		print "\t\t-as\tApp Enumerate Services"
 		print "\t\t-at\tApp Enumerate Secret Codes"
 		print "\t\t-ax\tApp Enumerate Everything"
@@ -141,8 +143,8 @@ def filter_permissions(outputraw):
 
 				
 def parse_manifest (manifest):
-	uses_feature = [] #hardware
-	uses_permission = [] # app permissions
+	uses_feature = []
+	uses_permission = []
 	activity = []
 	uses_library = []
 	service = []
@@ -154,6 +156,7 @@ def parse_manifest (manifest):
 	data = []
 	flag=""
 	parent=""
+	temp_exp = ""
 	
 	for line in manifest.splitlines():
 		if flag == "data" and "A: android" in line:
@@ -193,6 +196,8 @@ def parse_manifest (manifest):
 		elif "E: data" in line:
 			parent = flag
 			flag = "data"
+		elif "A: android:exported" in line:
+			parent = flag
 		if "A: android:name" in line:
 			(t1,line2,t2,t3,t4) = re.split('"',line)
 			if flag == "feature":
@@ -204,18 +209,22 @@ def parse_manifest (manifest):
 			elif flag == "activity":
 				activity.append(line2)
 				flag = line2
+				temp_exp = "activity"
 			elif flag == "library":
 				uses_library.append(line2)
 				flag = line2
 			elif flag == "service":
 				service.append(line2)
 				flag = line2
+				temp_exp = "service"
 			elif flag == "receiver":
 				receiver.append(line2)
 				flag = line2
+				temp_exp = "receiver"
 			elif flag == "provider":
 				provider.append(line2)
 				flag = line2
+				temp_exp = "provider"
 			elif flag == "meta-data":
 				meta_data.append(line2)
 				flag = "meta-data2"
@@ -240,17 +249,31 @@ def parse_manifest (manifest):
 				print line
 			permissions.append("Special Permission | " + parent + " | "+line2)
 			flag = parent
+		elif "A: android:exported" in line:
+			(t1,t2,line2) = re.split('\)',line)
+			if line2 == "0x0":
+				exported = "False"
+			else:
+				exported = "True"
+			if temp_exp == "activity":
+				activity.append("\t" + "Exported > " + exported)
+				temp_exp = ""
+			elif temp_exp == "service":
+				service.append("\t" + "Exported > " + exported)
+				temp_exp = ""
+			elif temp_exp == "receiver":
+				receiver.append("\t" + "Exported > " + exported)
+				temp_exp = ""
+			elif temp_exp == "provider":
+				provider.append("\t" + "Exported > " + exported)
+				temp_exp = ""
 			
 	uses_feature = list(set(uses_feature))
 	uses_permission = list(set(uses_permission))
-	activity = list(set(activity))
 	uses_library = list(set(uses_library))
-	service = list(set(service))
-	receiver = list(set(receiver))
-	provider = list(set(provider))
 	intent_filter = list(set(intent_filter))
 	permissions  = list(set(permissions))
-	
+
 	return uses_feature, uses_permission, activity, uses_library, service, receiver, provider, meta_data, intent_filter, permissions , data
 	
 	
@@ -311,6 +334,7 @@ def touches():
 def start_activities(action, app, activity, manifest):
 	if action == "-sa" and activity != "":
 		output = subprocess.check_output( Path_adb + ' shell am start -n ' + app + '/' + activity, shell=True)
+		#am start -a Action(Intent) -n Apk/Activity
 		print output
 	elif action == "-sa" and activity == "":
 		(uses_feature, uses_permission, activity, uses_library, service, receiver, provider, meta_data, intent_filter, permissions , data)=parse_manifest(manifest)
@@ -415,8 +439,11 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			printlists (meta_data)
 	elif action == "-at":
 		printwparents_ss (activity, intent_filter, data, app) 
+	elif action == "-ar":
+		print ('\nProviders \n=========')
+		printlists (provider)
 	elif action == "-ax":
-		print "\n[*] Analisis for app " + app
+		print "\n[*] Analysis for app " + app
 		if (activity != [] and status == 1) or status == 0:
 			print ('\nActivities\n==========')
 			printwparents (activity, newlist)
@@ -435,6 +462,9 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 		if (uses_feature != [] and status == 1) or status == 0:
 			print ('\nFeatures\n========')
 			printwparents (uses_feature, newlist)
+		if (provider != [] and status == 1) or status == 0:
+			print ('\nProviders \n=========')
+			printlists (provider)
 		if (uses_library != [] and status == 1) or status == 0:
 			print ('\nLibraries\n=========')
 			printwparents (uses_library, newlist)
@@ -482,7 +512,7 @@ def device_enumeration(action, parameter):
 	elif action == "-de":
 		output = subprocess.check_output( Path_adb + ' shell printenv ', shell=True)
 	else:
-		print "\nError - Unknown Option" 
+		print "'\n[*] Unknown Option" 
 		usage()
 	print "\n" + output
 	
@@ -492,12 +522,12 @@ def getmanifest(app):
 		act = subprocess.check_output( Path_aapt + ' dump xmltree ' + directory + '/'+ app + ' AndroidManifest.xml' , shell=True)
 		return act
 	except:
-		print "[*] Invalid App"
+		print "[*] Error getting Manifest"
 		usage()
 	
 	
 if __name__ == "__main__":
-	actionslist = ["-dd","-de","-du","-dg","-dl","-dp","-dq","-ds","-aa","-ab","-ac","-ad","-ae","-af","-ai","-al","-am","-ap","-aq","-as","-at","-ax","-lm","-ll","-sa","-sc","-sd","-si","-sk","-sm","-ss","-st","-su",'-ft']
+	actionslist = ["-dd","-de","-du","-dg","-dl","-dp","-dq","-ds","-aa","-ab","-ac","-ad","-ae","-af","-ai","-al","-am","-ap","-aq","-ar","-as","-at","-ax","-lm","-ll","-sa","-sc","-sd","-si","-sk","-sm","-ss","-st","-su",'-ft']
 	signal.signal(signal.SIGINT, signal_handler)
 	if (len(sys.argv) != 2 and len(sys.argv) != 3 and len(sys.argv) != 4):
 		usage()
@@ -547,5 +577,5 @@ if __name__ == "__main__":
 		manifest = getmanifest(app)
 		start_activities(action, app, activity, manifest)
 	else:
-		print "'\n[*] Error - Unknown parameter" 
+		print "'\n[*] Unknown parameter" 
 		usage()			
