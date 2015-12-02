@@ -2,7 +2,7 @@
 
 #changelog
 #06/11/15 Added -dp permissions types, updated -ap
-#02/12/15 Added exported analysis for activities, providers, services and receivers. Added Providers (-ar) that were lost in translation
+#02/12/15 Added exported analysis for activities, providers, services and receivers. Added Providers (-ar) that were lost in translation. Added codes for Manifest interpretation
 
 import sys
 import signal
@@ -113,7 +113,7 @@ def getdevicename():
 def applist(apkdic):
 	print "Application List\n"
 	print "%-50s %s" % ("Package","Path")
-	for key in apkdic: 
+	for key in sorted(apkdic): 
 		print "%-50s %s" % (key, apkdic[key])
 	sys.exit()
 
@@ -154,6 +154,7 @@ def parse_manifest (manifest):
 	intent_filter = []
 	permissions=[]
 	data = []
+	cp_permission = []
 	flag=""
 	parent=""
 	temp_exp = ""
@@ -196,20 +197,23 @@ def parse_manifest (manifest):
 		elif "E: data" in line:
 			parent = flag
 			flag = "data"
-		elif "A: android:exported" in line:
+		elif "A: android:exported" in line or "0x01010010" in line:
 			parent = flag
-		if "A: android:name" in line:
+		if "A: android:name" in line or "0x01010003" in line:
 			(t1,line2,t2,t3,t4) = re.split('"',line)
 			if flag == "feature":
 				uses_feature.append(line2)
 				flag = ""
-			elif flag == "permission":
+			elif flag == "uses-permission":
 				uses_permission.append(line2)
 				flag = ""
 			elif flag == "activity":
 				activity.append(line2)
 				flag = line2
 				temp_exp = "activity"
+			elif flag == "cp-permission":
+				cp_permission.append("Permission | " + parent + " | "+line2)
+				flag = line2
 			elif flag == "library":
 				uses_library.append(line2)
 				flag = line2
@@ -234,7 +238,7 @@ def parse_manifest (manifest):
 			elif flag == "category" :
 				intent_filter.append("Category | " + parent + " | "+line2)
 				flag = parent
-		elif "A: android:value" in line or "A: android:resource" in line:
+		elif "A: android:value" in line or "A: android:resource" in line or "0x01010024" in line or "0x01010025" in line:
 			try:
 				(t1,line2,t2,t3,t4) = re.split('"',line)
 			except:
@@ -242,12 +246,26 @@ def parse_manifest (manifest):
 			if flag == "meta-data2":
 				meta_data.append(line2)
 				flag = line2
-		elif "A: android:permission(" in line:
+		elif "A: android:permission(" in line or "0x01010006" in line:
 			try:
 				(t1,line2,t2,t3,t4) = re.split('"',line)
 			except:
 				print line
 			permissions.append("Special Permission | " + parent + " | "+line2)
+			flag = parent
+		elif "A: android:readPermission" in line or "0x01010007" in line:
+			try:
+				(t1,line2,t2,t3,t4) = re.split('"',line)
+			except:
+				print line
+			permissions.append("Read Permission | " + parent + " | "+line2)
+			flag = parent
+		elif "A: android:writePermission" in line or "0x01010008" in line:
+			try:
+				(t1,line2,t2,t3,t4) = re.split('"',line)
+			except:
+				print line
+			permissions.append("Write Permission | " + parent + " | "+line2)
 			flag = parent
 		elif "A: android:exported" in line:
 			(t1,t2,line2) = re.split('\)',line)
@@ -273,8 +291,8 @@ def parse_manifest (manifest):
 	uses_library = list(set(uses_library))
 	intent_filter = list(set(intent_filter))
 	permissions  = list(set(permissions))
-
-	return uses_feature, uses_permission, activity, uses_library, service, receiver, provider, meta_data, intent_filter, permissions , data
+	
+	return uses_feature, uses_permission, activity, uses_library, service, receiver, provider, meta_data, intent_filter, permissions , data, cp_permission
 	
 	
 def printlists(list):
@@ -374,7 +392,7 @@ def start_activities(action, app, activity, manifest):
 				
 def downloadapp(apk, app):
 	if not os.path.isfile (directory + '/' + app):
-		#print "[*] Downloading App " + app
+		print "[*] Downloading App " + app
 		try:
 			output = subprocess.call( Path_adb + ' pull ' + apk[1:] + ' ' + directory + '/' + app, stdout=open(os.devnull, "w"), stderr=subprocess.STDOUT, shell=True)
 		except:
@@ -387,8 +405,8 @@ def downloadapp(apk, app):
 def apps_enumeration (manifest, app, action, apkdic,status):
 	output = []
 	outputraw=[]
-	(uses_feature, uses_permission, activity, uses_library, service, receiver, provider, meta_data, intent_filter, permissions , data)=parse_manifest(manifest)
-	newlist=permissions + intent_filter + data
+	(uses_feature, uses_permission, activity, uses_library, service, receiver, provider, meta_data, intent_filter, permissions , data, cp_permission)=parse_manifest(manifest)
+	newlist=permissions + intent_filter + data + cp_permission
 	if action == "-aa":
 		if (activity != [] and status == 1) or status == 0:
 			print ('\nActivities (' + app + ')\n==========')
@@ -464,7 +482,7 @@ def apps_enumeration (manifest, app, action, apkdic,status):
 			printwparents (uses_feature, newlist)
 		if (provider != [] and status == 1) or status == 0:
 			print ('\nProviders \n=========')
-			printlists (provider)
+			printwparents (provider, newlist)
 		if (uses_library != [] and status == 1) or status == 0:
 			print ('\nLibraries\n=========')
 			printwparents (uses_library, newlist)
